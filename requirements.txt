@@ -1,0 +1,4 @@
+pywinusb
+pyserial
+pyvisa
+nidaqmx
