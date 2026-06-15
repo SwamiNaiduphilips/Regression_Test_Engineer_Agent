@@ -1,0 +1,1 @@
+start C:\Projects\ETP\trunk\Software\LabETP\03-LabVIEW\02-Python\"Hardware controll scripts"\BLECommunication\BLE_BLECentral\ConsoleApplication.exe

@@ -9,3 +9,13 @@ __pycache__/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# ignore build and generated artifacts from hardware control scripts
+Hardware controll scripts/**/.vs/
+Hardware controll scripts/**/*.ipch
+Hardware controll scripts/**/*.pdb
+Hardware controll scripts/**/*.obj
+Hardware controll scripts/**/*.lib
+Hardware controll scripts/**/*.exe
+Hardware controll scripts/QCP_mode_analyser/_previous.txt
+Hardware controll scripts/QCP_mode_analyser/samplesssList.txt
