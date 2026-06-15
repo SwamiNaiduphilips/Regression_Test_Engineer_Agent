@@ -1,4 +1,13 @@
-from .charge_test import ChargeTimeVerifier
+import os
+import sys
+
+if __package__ is None and hasattr(sys, 'argv'):
+    pkg_dir = os.path.dirname(os.path.abspath(__file__))
+    if pkg_dir not in sys.path:
+        sys.path.insert(0, pkg_dir)
+    from charge_test import ChargeTimeVerifier
+else:
+    from .charge_test import ChargeTimeVerifier
 
 
 def main():

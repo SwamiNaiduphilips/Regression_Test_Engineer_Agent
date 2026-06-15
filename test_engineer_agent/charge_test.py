@@ -1,7 +1,10 @@
 import time
 from typing import Dict, Any
 
-from .hardware_loader import load_hid_interface_class
+try:
+    from .hardware_loader import load_hid_interface_class
+except ImportError:
+    from hardware_loader import load_hid_interface_class
 
 HID_Interface = load_hid_interface_class()
 
