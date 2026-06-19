@@ -3,18 +3,15 @@ from typing import Dict, Any
 
 try:
     from .hardware_loader import (
-        load_hid_interface_class,
         load_battery_simulator_class,
         load_power_supply_class,
     )
 except ImportError:
     from hardware_loader import (
-        load_hid_interface_class,
         load_battery_simulator_class,
         load_power_supply_class,
     )
 
-HID_Interface = load_hid_interface_class()
 BatterySimulator = load_battery_simulator_class()
 PowerSupply = load_power_supply_class()
 
@@ -30,7 +27,6 @@ class ChargeTimeTestResult:
 class ChargeTimeVerifier:
     def __init__(
         self,
-        hid_device_name: str = 'ShaverAnalyser',
         timeout_minutes: int = 120,
         power_supply_address: str = 'GPIB0::5::INSTR',
         battery_simulator_address: str = 'GPIB0::1::INSTR',
@@ -39,7 +35,6 @@ class ChargeTimeVerifier:
         battery_voltage: float = 3.7,
         current_threshold_ma: float = 5.0,
     ):
-        self.hid_device_name = hid_device_name
         self.timeout_minutes = timeout_minutes
         self.power_supply_address = power_supply_address
         self.battery_simulator_address = battery_simulator_address
@@ -48,25 +43,8 @@ class ChargeTimeVerifier:
         self.battery_voltage = battery_voltage
         self.current_threshold_ma = current_threshold_ma
 
-        self.hid = None
         self.power_supply = None
         self.battery_simulator = None
-
-    def _connect(self) -> bool:
-        self.hid = HID_Interface(self.hid_device_name, isteststand=True)
-        return self.hid.open_Philips_dongle()
-
-    def _disconnect(self) -> None:
-        if self.hid is not None:
-            try:
-                self.hid.reset_to_default()
-            except Exception:
-                pass
-            try:
-                self.hid.close_Philips_dongle()
-            except Exception:
-                pass
-            self.hid = None
 
     def _open_power_supply(self) -> bool:
         if not self.power_supply_address:
@@ -126,20 +104,14 @@ class ChargeTimeVerifier:
         target_minutes: int = 60,
         poll_interval_seconds: int = 30,
     ) -> ChargeTimeTestResult:
-        if not self._connect():
-            raise RuntimeError('Unable to connect to HID dongle for charge verification')
-
         if not self._open_power_supply():
-            self._disconnect()
             raise RuntimeError('Unable to initialize power supply for charge verification')
 
         if not self._open_battery_simulator():
             self._disconnect_power_supply()
-            self._disconnect()
             raise RuntimeError('Unable to initialize battery simulator for charge verification')
 
         start_time = time.time()
-        self.hid.charge(True)
 
         result_details: Dict[str, Any] = {
             'target_minutes': target_minutes,
@@ -153,31 +125,17 @@ class ChargeTimeVerifier:
         try:
             while True:
                 elapsed_seconds = time.time() - start_time
-                charger_connected = self.hid.GET_chargerconnected()
-                inlet_voltage = self.hid.GET_inlet_voltage()
                 battery_current = self.battery_simulator.getCurrent()
 
                 result_details['states'].append({
                     'elapsed_seconds': round(elapsed_seconds, 1),
-                    'charger_connected': charger_connected,
-                    'inlet_voltage': inlet_voltage,
                     'battery_current_amps': battery_current,
                 })
-
-                if not charger_connected:
-                    details = {
-                        'reason': 'Charger disconnected during verification',
-                        'elapsed_seconds': elapsed_seconds,
-                        'inlet_voltage': inlet_voltage,
-                        'battery_current_amps': battery_current,
-                    }
-                    return ChargeTimeTestResult(requirement_id, False, elapsed_seconds, details)
 
                 if battery_current <= self.current_threshold_ma / 1000.0:
                     details = {
                         'reason': 'Charge current reached threshold',
                         'elapsed_seconds': elapsed_seconds,
-                        'inlet_voltage': inlet_voltage,
                         'battery_current_amps': battery_current,
                         'current_threshold_ma': self.current_threshold_ma,
                     }
@@ -188,7 +146,6 @@ class ChargeTimeVerifier:
                     details = {
                         'reason': 'Target duration reached before current fell below threshold',
                         'elapsed_seconds': elapsed_seconds,
-                        'inlet_voltage': inlet_voltage,
                         'battery_current_amps': battery_current,
                     }
                     return ChargeTimeTestResult(requirement_id, False, elapsed_seconds, details)
@@ -197,7 +154,6 @@ class ChargeTimeVerifier:
                     details = {
                         'reason': 'Verification timed out before reaching current threshold',
                         'elapsed_seconds': elapsed_seconds,
-                        'inlet_voltage': inlet_voltage,
                         'battery_current_amps': battery_current,
                     }
                     return ChargeTimeTestResult(requirement_id, False, elapsed_seconds, details)
@@ -205,7 +161,5 @@ class ChargeTimeVerifier:
                 time.sleep(poll_interval_seconds)
 
         finally:
-            self.hid.charge(False)
             self._disconnect_battery_simulator()
             self._disconnect_power_supply()
-            self._disconnect()

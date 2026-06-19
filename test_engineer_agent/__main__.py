@@ -12,7 +12,6 @@ else:
 
 def main():
     verifier = ChargeTimeVerifier(
-        hid_device_name='ShaverAnalyser',
         timeout_minutes=90,
         power_supply_address='GPIB0::5::INSTR',
         battery_simulator_address='GPIB0::1::INSTR',
